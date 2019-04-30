@@ -16,7 +16,7 @@ function ccvt(res, numSeeds){
     var centroidTextureMesh = initCentroidTextureMesh(numSeeds, res);
     var centroidRenderTarget = gpuComputeVoronoi.createRenderTarget(res, res, null, null, THREE.NearestFilter, 
         THREE.NearestFilter);
-    renderCentroidsToTexture(centroidTextureMesh, centroidRenderTarget, numSeeds);
+    renderCentroidsToTexture(centroidTextureMesh, centroidRenderTarget, numSeeds, res);
     return centroidRenderTarget.texture;
 
     //return jfaPlusOne(jfVar, gpuComputeVoronoi, res);
@@ -27,6 +27,7 @@ function writeCentroidPlacementShader(numSeeds){
     `
         uniform sampler2D centroidPlacement;
         uniform float numSeeds;
+        uniform vec2 errorBound;
 
         bool between(const vec2 value, const vec2 bottom, const vec2 top) {
             return (
@@ -38,37 +39,33 @@ function writeCentroidPlacementShader(numSeeds){
         void main(){
             vec2 uv = gl_FragCoord.xy / resolution.xy;
             gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+            vec2 seed;
+            vec2 centroidLabel;
+            vec2 centroidPos;
+            vec4 centroidColor;
     `;
-    for (var i=numSeeds - 1; i >= 1; i--){
+    for (var i=0; i < numSeeds; i++){
         centroidPlacementShader += 
         `
-        vec2 seed${i} = vec2(${i}, 0) / vec2(numSeeds, 1);
-        vec4 centroidPos${i} = texture2D(centroidPlacement, seed${i} );
-        float centroidPosX${i} = centroidPos${i}[0];
-        float centroidPosY${i} = centroidPos${i}[1];
+        seed = vec2(${i}, 0) / resolution.xy;
+        centroidColor = texture2D(centroidPlacement, seed );
+        centroidPos = vec2(centroidColor[0], centroidColor[1]);
 
-        gl_FragColor = vec4(centroidPosX${i} / resolution.x, centroidPosY${i} / resolution.y, 1.0, 1.0);
-
-        if(between(gl_FragCoord.xy, vec2(centroidPosX${i} - 1, -1), vec2(centroidPosY${i} + 1, 1))){
-            gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+        if(between(uv, vec2(centroidPos - errorBound), vec2(centroidPos + errorBound))){
+            gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
         }
-
-        //gl_FragColor = vec4(gl_FragCoord.x, 0.0, 1.0, 1.0);
-        
-        //gl_FragColor = vec4(uv[0], uv[1], 1.0, 1.0);
-        //if(all(equal(vec2(uv[0], 0.0), vec2(0.0, 0.0)))){
-        //    gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
-        //}
         `;
     }
-    centroidPlacementShader += `}`
+    centroidPlacementShader += `}`;
+    //console.log(centroidPlacementShader);
     return centroidPlacementShader
 }
 
 function initCentroidTextureMesh(numSeeds, res){
     var centroidTextureUniforms = {
         centroidPlacement: { type: "t", value: null },
-        numSeeds: {value: numSeeds}
+        numSeeds: {value: numSeeds},
+        errorBound: {value: [0.9 / res, 0.9 / res]}
         
     };
 
@@ -90,9 +87,11 @@ function initCentroidTextureMesh(numSeeds, res){
     return centroidMesh;
 }
 
-function renderCentroidsToTexture(centroidMesh, centroidRenderTarget, numSeeds){
+function renderCentroidsToTexture(centroidMesh, centroidRenderTarget, numSeeds, res){
     var rtScene = new THREE.Scene();
-    centroidMesh.material.uniforms['centroidPlacement'] = myCreateTexture(numSeeds, 1)
+    //rtScene.background = new THREE.Color( 0xffffff );
+    centroidMesh.material.uniforms['centroidPlacement'].value = myCreateTexture(res, res);
+    console.log(centroidMesh.material.uniforms['centroidPlacement'].value);
     rtScene.add(centroidMesh);
 
 	var rtCamera = new THREE.Camera();
@@ -113,7 +112,14 @@ function myCreateTexture(sizeX, sizeY) {
     texture.needsUpdate = true;
 
     //texture[0] = [100, 50, 1.0, 1.0];
-    //texture[1] = [90, 50, 1.0, 1.0];
+    //texture[1] = [90/128, 50/128, 1.0, 1.0];
+    //texture.image.data[0] = 25 / 128;
+    //texture.image.data[1] = 40 / 128;
+    for(var i=0; i < 14; i++){
+        var idx = i * 4;
+        texture.image.data[idx] = getRandomInt(0, 127) / 128;
+        texture.image.data[idx + 1] = getRandomInt(0, 127) / 128;
+    }
 
     return texture;
 
