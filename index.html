@@ -14,7 +14,7 @@
         <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/103/three.js"></script>
         <script src="js/plugins/OrbitControls.js"></script>
         <script src="js/plugins/GPUComputationRenderer.js"></script>
-        <script src="js/shaders/jumpFloodCalculator.js"></script>
+        <script src="js/shaders.js"></script>
         <script src="js/ccvt.js"></script>
         <script id="vertexShader" type="x-shader/x-vertex">
             varying vec2 vUv;
@@ -88,6 +88,7 @@
             var cubeUniforms = {
                 texture1: { type: "t", value: null }
             };
+            //ccvt(res, numSeeds);
             var vertShader = document.getElementById('vertexShader').textContent;
             //var fragShader = document.getElementById('voronoiShader').textContent;
 
@@ -112,6 +113,9 @@
             function render(){
                 renderer.render( scene, camera );
             }
+
+
+
             //render( scene, camera );
 
             /*function reduceRegions(numSeeds){

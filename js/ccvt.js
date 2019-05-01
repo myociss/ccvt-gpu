@@ -7,43 +7,30 @@ function ccvt(res, numSeeds){
     jfUniforms['stepSize'] = {value: 0};
     gpuComputeVoronoi.setVariableDependencies( jfVar, [ jfVar ] );
     gpuComputeVoronoi.init();
+    jfaPlusOne(jfVar, gpuComputeVoronoi, res);
 
-    /*var gpuComputeNewSeeds = new GPUComputationRenderer(numSeeds, 0, renderer);
-    var computeSeedsTexture = gpuComputeNewSeeds.createTexture();
-    var computeSeedsVar = gpuComputeNewSeeds.addVariable('centroidPlacement', writeCentroidPlacementShader(numSeeds), computeSeedsTexture);
-    computeSeedsTexture.setVariableDependencies(computeSeedsVar, [ computeSeedsVar] );
-    gpuComputeNewSeeds.init();*/
-    var centroidTextureMesh = initCentroidTextureMesh(numSeeds, res);
-    var centroidRenderTarget = gpuComputeVoronoi.createRenderTarget(res, res, null, null, THREE.NearestFilter, 
+    var newSeedMesh = initNewSeedCalcMesh(numSeeds, res);
+    var newSeedRt = gpuComputeVoronoi.createRenderTarget(res, res, null, null, THREE.NearestFilter, 
         THREE.NearestFilter);
-    renderCentroidsToTexture(centroidTextureMesh, centroidRenderTarget, numSeeds, res);
-    return centroidRenderTarget.texture;
+    newSeedMesh.material.uniforms['pixelPosition'].value = 
+        gpuComputeVoronoi.getCurrentRenderTarget(jfVar).texture;
+    getNewCentroidTexture(newSeedMesh, newSeedRt, res);
+    return newSeedRt.texture;
+    
+    
+    //return newSeedRt.texture;
+    
+    //var centroidTextureMesh = initCentroidTextureMesh(numSeeds, res);
+    //var centroidRenderTarget = gpuComputeVoronoi.createRenderTarget(res, res, null, null, THREE.NearestFilter, 
+    //    THREE.NearestFilter);
+    //renderCentroidsToTexture(centroidTextureMesh, centroidRenderTarget, numSeeds, res);
+    //return centroidRenderTarget.texture;
 
     //return jfaPlusOne(jfVar, gpuComputeVoronoi, res);
 }
 
 function writeCentroidPlacementShader(numSeeds){
-    var centroidPlacementShader = 
-    `
-        uniform sampler2D centroidPlacement;
-        uniform float numSeeds;
-        uniform vec2 errorBound;
-
-        bool between(const vec2 value, const vec2 bottom, const vec2 top) {
-            return (
-                all(greaterThan(value, bottom)) &&
-                all(lessThan(value, top))
-            );
-        }
-
-        void main(){
-            vec2 uv = gl_FragCoord.xy / resolution.xy;
-            gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
-            vec2 seed;
-            vec2 centroidLabel;
-            vec2 centroidPos;
-            vec4 centroidColor;
-    `;
+    var centroidPlacementShader = centroidPlacementShaderMain;
     for (var i=0; i < numSeeds; i++){
         centroidPlacementShader += 
         `
@@ -60,6 +47,44 @@ function writeCentroidPlacementShader(numSeeds){
     //console.log(centroidPlacementShader);
     return centroidPlacementShader
 }
+
+function initNewSeedCalcMesh(numSeeds, res){
+    var pointGeometry = new THREE.BufferGeometry();
+    var positions = [];
+
+    for(var i=0; i < res; i++){
+        for(var j=0; j < res; j++){
+            positions.push(i, j, 0);
+        }
+    }
+
+    pointGeometry.addAttribute( 'position', new THREE.Float32BufferAttribute( positions, 3 ) );
+    var referenceArray = [];
+            
+    for(var i=0; i < res; i++){
+        for(var j=0; j < res; j++){
+            referenceArray.push(i / res, j / res);
+        }
+    }
+
+    pointGeometry.addAttribute( 'reference', new THREE.Float32BufferAttribute( referenceArray, 2 )  );
+    
+    var pointUniforms = {
+        pixelPosition: { type: "t", value: null },
+        res: { value: res }
+        
+    };
+
+    var pointMaterial = new THREE.ShaderMaterial({
+        uniforms: pointUniforms,
+        vertexShader: reduceVerticesShader,
+        fragmentShader: reduceVerticesFragShader
+    });
+
+    var pointMesh = new THREE.Points(pointGeometry, pointMaterial);
+    return pointMesh;
+}
+
 
 function initCentroidTextureMesh(numSeeds, res){
     var centroidTextureUniforms = {
@@ -86,6 +111,34 @@ function initCentroidTextureMesh(numSeeds, res){
     var centroidMesh = new THREE.Mesh( new THREE.PlaneBufferGeometry( 2, 2 ), centroidMaterial );
     return centroidMesh;
 }
+
+function getNewCentroidTexture(pointMesh, pointRenderTarget, res){
+    var rtScene = new THREE.Scene;
+    rtScene.background = new THREE.Color( 0xffffff );
+    //pointMesh.material.uniforms['pixelPosition'] = 
+    rtScene.add(pointMesh);
+    var width = res;
+    var height = res;
+    //var rtCamera = new THREE.OrthographicCamera(width/- 2, width/2, height/2, height/- 2, 0.1);
+    var rtCamera = new THREE.Camera();
+    rtCamera.position.z = 1;
+    //var currentWindow = renderer.getDrawingBufferSize();
+    var currentRenderTarget = renderer.getRenderTarget();
+
+    var currentSize = new THREE.Vector2();
+    renderer.getDrawingBufferSize(currentSize);
+    
+    //renderer.setSize(res, res);
+    renderer.setRenderTarget(pointRenderTarget);
+    renderer.render(rtScene, rtCamera);
+
+    //not sure if changing the size back is actually necessary....
+    //renderer.setSize(currentSize.x, currentSize.y);
+    //currentRenderTarget.add(pointMesh);
+    renderer.setRenderTarget(currentRenderTarget);
+    //renderer.render(rtScene, rtCamera);
+}
+
 
 function renderCentroidsToTexture(centroidMesh, centroidRenderTarget, numSeeds, res){
     var rtScene = new THREE.Scene();
@@ -182,9 +235,6 @@ function initSeedsTexture(numSeeds, width, height, renderer){
     seedsCompute = new GPUComputationRenderer( width, height, renderer );
 }
 
-
-
-
 function initVoronoiTexture(numSeeds, res){
     var seeds = getStartingSeeds(numSeeds, res, res);
 
@@ -200,7 +250,7 @@ function initVoronoiTexture(numSeeds, res){
     for(var i=0; i < seeds.length; i++){
         var x = seeds[i][0] / res;
         var y = seeds[i][1] / res;
-        var seedId = i / seeds.length;
+        var seedId = i / res;
         seedData[seeds[i][0]][seeds[i][1]] = [x, y, seedId, 1.0];
     }
 
