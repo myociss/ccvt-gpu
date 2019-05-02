@@ -88,6 +88,12 @@
             var cubeUniforms = {
                 texture1: { type: "t", value: null }
             };
+            var otherCubeUniforms = {
+                texture1: { type: "t", value: null }
+            };
+            var thirdCubeUniforms = {
+                texture1: { type: "t", value: null }
+            };
             //ccvt(res, numSeeds);
             var vertShader = document.getElementById('vertexShader').textContent;
             //var fragShader = document.getElementById('voronoiShader').textContent;
@@ -98,11 +104,32 @@
                 fragmentShader: cubeShader
             });
 
+            var otherCubeMaterial = new THREE.ShaderMaterial({
+                uniforms: otherCubeUniforms,
+                vertexShader: vertShader,
+                fragmentShader: cubeShader
+            });
+
+            var thirdCubeMaterial = new THREE.ShaderMaterial({
+                uniforms: thirdCubeUniforms,
+                vertexShader: vertShader,
+                fragmentShader: cubeShader
+            });
+
             var cube = new THREE.Mesh( geometry, cubeMaterial );
+            var otherCube = new THREE.Mesh(geometry, otherCubeMaterial);
+            var thirdCube = new THREE.Mesh(geometry, thirdCubeMaterial);
 
             scene.add( cube );
+            scene.add(otherCube);
+            scene.add(thirdCube);
+
+            otherCube.translateX(1.2);
+            thirdCube.translateX(-1.2);
 
             cubeUniforms["texture1"].value = ccvt(res, numSeeds);
+            otherCubeUniforms['texture1'].value = myVar;
+            thirdCubeUniforms['texture1'].value = asdf;
 
             camera.position.z = 5;
 

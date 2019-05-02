@@ -73,7 +73,7 @@ var jumpFloodShader =
         vec2 myLabel = vec2(myColor[0], myColor[1]);
 
         //what is my seed id if any?
-        float mySeedId = myColor[1];
+        float mySeedId = myColor[2];
 
         //how far from my label am i?
         float myDist = distance(uv, myLabel);
@@ -87,7 +87,6 @@ var jumpFloodShader =
         float myNewSeedId = myNewLabel[2];
 
         myNewLabel = compareNeighbor(uv, myNewPos, myNewSeedId, vec2(myStepSize, myStepSize));
-
         myNewPos = vec2(myNewLabel[0], myNewLabel[1]);
         myNewSeedId = myNewLabel[2];
 
@@ -95,18 +94,23 @@ var jumpFloodShader =
         myNewLabel = compareNeighbor(uv, myNewPos, myNewSeedId, vec2(myStepSize, 0));
         myNewPos = vec2(myNewLabel[0], myNewLabel[1]);
         myNewSeedId = myNewLabel[2];
+
         myNewLabel = compareNeighbor(uv, myNewPos, myNewSeedId, vec2(myStepSize, - myStepSize));
         myNewPos = vec2(myNewLabel[0], myNewLabel[1]);
         myNewSeedId = myNewLabel[2];
+
         myNewLabel = compareNeighbor(uv, myNewPos, myNewSeedId, vec2(0, - myStepSize));
         myNewPos = vec2(myNewLabel[0], myNewLabel[1]);
         myNewSeedId = myNewLabel[2];
+
         myNewLabel = compareNeighbor(uv, myNewPos, myNewSeedId, vec2(- myStepSize, - myStepSize));
         myNewPos = vec2(myNewLabel[0], myNewLabel[1]);
         myNewSeedId = myNewLabel[2];
+
         myNewLabel = compareNeighbor(uv, myNewPos, myNewSeedId, vec2(- myStepSize, 0));
         myNewPos = vec2(myNewLabel[0], myNewLabel[1]);
         myNewSeedId = myNewLabel[2];
+
         myNewLabel = compareNeighbor(uv, myNewPos, myNewSeedId, vec2(- myStepSize, myStepSize));
 
         gl_FragColor = vec4(myNewLabel, 1.0);
@@ -117,6 +121,7 @@ var reduceVerticesShader =
     uniform sampler2D pixelPosition;
     uniform float res;
     attribute vec2 reference;
+    varying lowp vec4 vColor;
     varying vec2 vUv;
 
     void main() {
@@ -125,26 +130,22 @@ var reduceVerticesShader =
 
         vec4 textureColor = texture2D( pixelPosition, reference );
         float seedId = textureColor[2];
-        //gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        
-        //gl_Position = vec4( (reference * 2.0) + vec2(-1.0 + (1.0/res), 
-        //    -1.0 + (1.0/res)), 0, 1.0);
-        gl_Position = vec4((seedId * 1.0) + -1.0 + (1.0/res),
-            -1.0 + (1.0/res), 0, 1.0);
-        
-        
-            //gl_Position = projectionMatrix * modelViewMatrix * 
-        //    vec4(64, 100, 0.1, 1.0);
-        //gl_Position = vec4(63, 63, 0.1, 1.0);
+
+        //vColor = vec4(textureColor[0], textureColor[1], 1.0, 1.0);
+        vColor = vec4(reference, 1.0, 1.0);
+        gl_Position = vec4((seedId * 2.0) + -1.0 + (1.0/res),
+            -1.0 + (1.0/res), 0, 1.0);        
     }`;
 
 var reduceVerticesFragShader =
     `
-    uniform sampler2D pixelPosition;
-    varying vec2 vUv;
+    //uniform sampler2D pixelPosition;
+    //varying vec2 vUv;
+    varying lowp vec4 vColor;
 
     void main() {
-        gl_FragColor = texture2D(pixelPosition, vUv);
+        //gl_FragColor = texture2D(pixelPosition, vUv);
+        gl_FragColor = vColor;
     }`;
 
 var centroidPlacementShaderMain = 
@@ -152,6 +153,7 @@ var centroidPlacementShaderMain =
     uniform sampler2D centroidPlacement;
     uniform float numSeeds;
     uniform vec2 errorBound;
+    uniform float res;
 
     bool between(const vec2 value, const vec2 bottom, const vec2 top) {
         return (
@@ -166,5 +168,6 @@ var centroidPlacementShaderMain =
         vec2 seed;
         vec2 centroidLabel;
         vec2 centroidPos;
+        vec4 centroidColorStored;
         vec4 centroidColor;
     `;

@@ -1,3 +1,6 @@
+var myVar;
+var asdf;
+
 function ccvt(res, numSeeds){
     var gpuComputeVoronoi = new GPUComputationRenderer( res, res, renderer );
     var voronoiTexture = initVoronoiTexture(numSeeds, res);
@@ -7,24 +10,45 @@ function ccvt(res, numSeeds){
     jfUniforms['stepSize'] = {value: 0};
     gpuComputeVoronoi.setVariableDependencies( jfVar, [ jfVar ] );
     gpuComputeVoronoi.init();
-    jfaPlusOne(jfVar, gpuComputeVoronoi, res);
+    //return jfaPlusOne(jfVar, gpuComputeVoronoi, res);
+    //jfaPlusOne
 
     var newSeedMesh = initNewSeedCalcMesh(numSeeds, res);
     var newSeedRt = gpuComputeVoronoi.createRenderTarget(res, res, null, null, THREE.NearestFilter, 
         THREE.NearestFilter);
-    newSeedMesh.material.uniforms['pixelPosition'].value = 
-        gpuComputeVoronoi.getCurrentRenderTarget(jfVar).texture;
-    getNewCentroidTexture(newSeedMesh, newSeedRt, res);
-    return newSeedRt.texture;
-    
-    
-    //return newSeedRt.texture;
-    
-    //var centroidTextureMesh = initCentroidTextureMesh(numSeeds, res);
-    //var centroidRenderTarget = gpuComputeVoronoi.createRenderTarget(res, res, null, null, THREE.NearestFilter, 
-    //    THREE.NearestFilter);
-    //renderCentroidsToTexture(centroidTextureMesh, centroidRenderTarget, numSeeds, res);
-    //return centroidRenderTarget.texture;
+
+    var centroidTextureMesh = initCentroidTextureMesh(numSeeds, res);
+    var centroidRenderTarget = gpuComputeVoronoi.createRenderTarget(res, res, null, null, THREE.NearestFilter, 
+        THREE.NearestFilter);
+
+    /*for(var i=0; i < 5; i++){
+        getNewCentroidTexture(newSeedMesh, newSeedRt, res);
+        centroidTextureMesh.material.uniforms['centroidPlacement'].value = newSeedRt.texture;
+        renderCentroidsToTexture(centroidTextureMesh, centroidRenderTarget, numSeeds, res); 
+        jfUniforms['jumpFlood'] = centroidRenderTarget.texture;
+        jfaPlusOne(jfVar, gpuComputeVoronoi, res);
+    }
+
+    return gpuComputeVoronoi.getCurrentRenderTarget(jfVar).texture;*/
+    var jfa;
+
+    for(var i=0; i < 3; i++){
+        jfa = jfaPlusOne(jfVar, gpuComputeVoronoi, res);
+        asdf = jfa;
+
+        newSeedMesh.material.uniforms['pixelPosition'].value = jfa;
+        getNewCentroidTexture(newSeedMesh, newSeedRt, res);
+
+        centroidTextureMesh.material.uniforms['centroidPlacement'].value = newSeedRt.texture;
+        renderCentroidsToTexture(centroidTextureMesh, centroidRenderTarget, numSeeds, res);
+        jfUniforms['jumpFlood'].value = centroidRenderTarget.texture;
+    }
+
+    //return jfa;
+
+    return centroidRenderTarget.texture;
+
+    //return gpuComputeVoronoi.getCurrentRenderTarget(jfVar).texture;
 
     //return jfaPlusOne(jfVar, gpuComputeVoronoi, res);
 }
@@ -35,11 +59,13 @@ function writeCentroidPlacementShader(numSeeds){
         centroidPlacementShader += 
         `
         seed = vec2(${i}, 0) / resolution.xy;
-        centroidColor = texture2D(centroidPlacement, seed );
+        centroidColorStored = texture2D(centroidPlacement, seed );
+        centroidColor = vec4(centroidColorStored / centroidColorStored[2]);
         centroidPos = vec2(centroidColor[0], centroidColor[1]);
 
         if(between(uv, vec2(centroidPos - errorBound), vec2(centroidPos + errorBound))){
-            gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+            //gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+            gl_FragColor = vec4(centroidPos, ${i}.0/res, 1.0);
         }
         `;
     }
@@ -81,6 +107,11 @@ function initNewSeedCalcMesh(numSeeds, res){
         fragmentShader: reduceVerticesFragShader
     });
 
+    pointMaterial.blending = THREE.CustomBlending;
+    pointMaterial.blendEquation = THREE.AddEquation;
+    pointMaterial.blendSrc = THREE.OneFactor;
+    pointMaterial.blendDst = THREE.OneFactor;
+
     var pointMesh = new THREE.Points(pointGeometry, pointMaterial);
     return pointMesh;
 }
@@ -90,8 +121,8 @@ function initCentroidTextureMesh(numSeeds, res){
     var centroidTextureUniforms = {
         centroidPlacement: { type: "t", value: null },
         numSeeds: {value: numSeeds},
-        errorBound: {value: [0.9 / res, 0.9 / res]}
-        
+        errorBound: {value: [0.9 / res, 0.9 / res]},
+        res: {value: res}
     };
 
     var vertexPassShader = 
@@ -143,7 +174,7 @@ function getNewCentroidTexture(pointMesh, pointRenderTarget, res){
 function renderCentroidsToTexture(centroidMesh, centroidRenderTarget, numSeeds, res){
     var rtScene = new THREE.Scene();
     //rtScene.background = new THREE.Color( 0xffffff );
-    centroidMesh.material.uniforms['centroidPlacement'].value = myCreateTexture(res, res);
+    //centroidMesh.material.uniforms['centroidPlacement'].value = myCreateTexture(res, res);
     console.log(centroidMesh.material.uniforms['centroidPlacement'].value);
     rtScene.add(centroidMesh);
 
@@ -158,7 +189,7 @@ function renderCentroidsToTexture(centroidMesh, centroidRenderTarget, numSeeds, 
     renderer.setRenderTarget( currentRenderTarget );
 }
 
-function myCreateTexture(sizeX, sizeY) {
+/*function myCreateTexture(sizeX, sizeY) {
 
     var a = new Float32Array( sizeX * sizeY * 4 );
     var texture = new THREE.DataTexture( a, sizeX, sizeY, THREE.RGBAFormat, THREE.FloatType );
@@ -176,7 +207,7 @@ function myCreateTexture(sizeX, sizeY) {
 
     return texture;
 
-};
+};*/
 
 /*function initCentroidTextureRenderer(res, centroidTextureMesh){
     var rtScene = new THREE.Scene();
@@ -268,6 +299,7 @@ function initVoronoiTexture(numSeeds, res){
 
     var voronoiTexture = new THREE.DataTexture( data, res, res, THREE.RGBAFormat, THREE.FloatType );
     voronoiTexture.needsUpdate = true;
+    myVar = voronoiTexture;
     return voronoiTexture;
 }
 
