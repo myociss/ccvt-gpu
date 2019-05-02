@@ -32,7 +32,7 @@ function ccvt(res, numSeeds){
     return gpuComputeVoronoi.getCurrentRenderTarget(jfVar).texture;*/
     var jfa;
 
-    for(var i=0; i < 3; i++){
+    for(var i=0; i < 25; i++){
         jfa = jfaPlusOne(jfVar, gpuComputeVoronoi, res);
         asdf = jfa;
 
