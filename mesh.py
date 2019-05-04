@@ -53,10 +53,10 @@ class Mesh:
 
             orientation = get_orientation(v0, v1, v2)
 
-            if orientation > 0:
-                tmp = face[1]
-                self.faces[face_idx][1] = face[2]
-                self.faces[face_idx][2] = tmp
+            #if orientation > 0:
+            #    tmp = face[1]
+            #    self.faces[face_idx][1] = face[2]
+            #    self.faces[face_idx][2] = tmp
 
             v0 = self.vertices[face[0]]
             v1 = self.vertices[face[1]]
@@ -230,19 +230,23 @@ phi -= phi_min
 print(phi_min)
 print(np.amin(phi))
 print(phi[398])
-print(phi[99])
-print(phi[444])
-print(phi[401])
+phi_max = np.amax(phi)
 
-with open('vertex_colors.txt', 'w') as f:
-    for vertex_color in phi:
-        f.write(str(vertex_color))
-        f.write('\n')
+phi /= phi_max
 
+with open('vertex_colors.js', 'w') as f:
+    json.dump([elem for elem in phi], f)
+
+'''
 vertices = [[comp for comp in v] for v in mesh.vertices]
 
-with open('vertices.json', 'w') as f:
+with open('vertices.js', 'w') as f:
     json.dump(vertices, f)
+
+faces = [[v.item() for v in face] for face in mesh.faces]
+with open('faces.js', 'w') as f:
+    json.dump(faces, f)
+'''
 #print(x)
 
 '''

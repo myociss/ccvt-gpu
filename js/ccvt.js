@@ -175,7 +175,7 @@ function renderCentroidsToTexture(centroidMesh, centroidRenderTarget, numSeeds, 
     var rtScene = new THREE.Scene();
     //rtScene.background = new THREE.Color( 0xffffff );
     //centroidMesh.material.uniforms['centroidPlacement'].value = myCreateTexture(res, res);
-    console.log(centroidMesh.material.uniforms['centroidPlacement'].value);
+    //console.log(centroidMesh.material.uniforms['centroidPlacement'].value);
     rtScene.add(centroidMesh);
 
 	var rtCamera = new THREE.Camera();
@@ -229,7 +229,7 @@ function jfaPlusOne(jfVar, gpuCompute, res){
 
     var stepSize = 2 ** (Math.ceil(Math.log2(res)) - 1);
     while(stepSize >= 1.0){
-        console.log(stepSize)
+        //console.log(stepSize)
         jfUniforms['stepSize'].value = stepSize;
         gpuCompute.compute();
         stepSize /= 2;

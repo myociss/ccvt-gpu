@@ -16,6 +16,12 @@ var jumpFloodShader =
             );
         }
 
+    float cylinderDistance(vec2 a, vec2 b){
+        float xDist = min(abs(a.x - b.x), 1.0 - abs(a.x - b.x));
+        float yDist = a.y - b.y;
+        return sqrt(xDist * xDist + yDist * yDist);
+    }
+
     vec3 compareNeighbor(const vec2 myUv, const vec2 myLabel, const float mySeedId, const vec2 offset){
         //what is the other uv?
         vec2 otherUv = (gl_FragCoord.xy + offset) / resolution.xy;
@@ -50,8 +56,8 @@ var jumpFloodShader =
         }
 
         //both of us are valid
-        float myDist = distance(myUv, myLabel);
-        float otherDist = distance(myUv, otherLabel);
+        float myDist = cylinderDistance(myUv, myLabel);
+        float otherDist = cylinderDistance(myUv, otherLabel);
                 
         float minDist = min(myDist, otherDist);
 
@@ -76,7 +82,7 @@ var jumpFloodShader =
         float mySeedId = myColor[2];
 
         //how far from my label am i?
-        float myDist = distance(uv, myLabel);
+        float myDist = cylinderDistance(uv, myLabel);
 
         int myStepSize = stepSize;
 
