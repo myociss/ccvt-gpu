@@ -79,8 +79,8 @@
             renderer.setSize( window.innerWidth, window.innerHeight );
             document.body.appendChild( renderer.domElement );
 
-            var geometry = new THREE.BoxGeometry( 1, 1, 1 );
-            var numSeeds = 5;
+            var geometry = new THREE.CylinderGeometry( 1, 1, 4, 32, 1, true );
+            var numSeeds = 14;
 
             var res = 256;
 
@@ -116,22 +116,24 @@
                 fragmentShader: cubeShader
             });
 
+            thirdCubeMaterial.side = THREE.DoubleSide;
+
             var cube = new THREE.Mesh( geometry, cubeMaterial );
             var otherCube = new THREE.Mesh(geometry, otherCubeMaterial);
             var thirdCube = new THREE.Mesh(geometry, thirdCubeMaterial);
 
-            scene.add( cube );
-            scene.add(otherCube);
+            //scene.add( cube );
+            //scene.add(otherCube);
             scene.add(thirdCube);
 
-            otherCube.translateX(1.2);
-            thirdCube.translateX(-1.2);
+            //otherCube.translateX(3);
+            thirdCube.translateX(-3);
 
             cubeUniforms["texture1"].value = ccvt(res, numSeeds);
             otherCubeUniforms['texture1'].value = myVar;
             thirdCubeUniforms['texture1'].value = asdf;
 
-            camera.position.z = 5;
+            camera.position.z = 10;
 
             controls = new THREE.OrbitControls( camera, renderer.domElement );
             controls.addEventListener( 'change', render );
@@ -140,306 +142,6 @@
             function render(){
                 renderer.render( scene, camera );
             }
-
-
-
-            //render( scene, camera );
-
-            /*function reduceRegions(numSeeds){
-                var width = 2 * numSeeds;
-                var height = 2;
-                var rtCamera = new THREE.OrthographicCamera( width / - 2, width / 2, height / 2, height / - 2, 1, 1000 );
-                
-                var rtScene = new THREE.Scene();
-                rtScene.background = new THREE.Color( 0xff0000 );
-                rtScene.add(camera);
-                var textureRenderer = new THREE.WebGLRenderer();
-                textureRenderer.setSize( width, height );
-                var renderTarget = gpuCompute.createRenderTarget(width, height, null, null, THREE.NearestFilter, 
-                    THREE.NearestFilter);
-                textureRenderer.setRenderTarget(renderTarget);
-                textureRenderer.render(rtScene, rtCamera);
-                textureRenderer.setRenderTarget(null);
-            }*/
-
-
-            
-
-            //var scene = new THREE.Scene();
-            //scene.background = new THREE.Color( 0xff0000 );
-           // var camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
-
-            /*var renderer = new THREE.WebGLRenderer();
-            renderer.setSize( window.innerWidth, window.innerHeight );
-            document.body.appendChild( renderer.domElement );
-
-            var geometry = new THREE.BoxGeometry( 1, 1, 1 );
-
-            //var geometry = new THREE.SphereGeometry(1, 50, 50)
-            var numSeeds = 14;
-
-
-
-            var res = 128;
-            
-
-            var size = res * res;
-            var data = new Float32Array( 4 * size );
-
-            var seeds = getSeeds(numSeeds, res, res);
-
-            var seedData = [];
-
-            for(var i=0; i < res; i++){
-                seedData.push([]);
-                for(var j=0; j < res; j++){
-                    //seedData[i][j]=[0,0,0];
-                    seedData[i].push([1.0,1.0,1.0,1.0]);
-                }
-            }
-
-            for(var i=0; i < seeds.length; i++){
-                var x = seeds[i][0] / res;
-                var y = seeds[i][1] / res;
-                var seedId = i / seeds.length;
-                seedData[seeds[i][0]][seeds[i][1]] = [x, y, seedId, 1.0];
-            }
-
-            for(var i=0; i < res; i++){
-                for(var j=0; j < res; j++){
-                    //seedData[i][j]=[0,0,0];
-                    var dataIdx = 4 * ((i * res) + j);
-                    data[dataIdx] = seedData[i][j][0];
-                    data[dataIdx + 1] = seedData[i][j][1];
-                    data[dataIdx + 2] = seedData[i][j][2];
-                    data[dataIdx + 3] = seedData[i][j][3];
-                }
-            }
-
-
-            // used the buffer to create a DataTexture
-
-            var voronoiTexture = new THREE.DataTexture( data, res, res, THREE.RGBAFormat, THREE.FloatType );
-            voronoiTexture.needsUpdate = true;
-
-            var centroidData = new Float32Array( 4 * size );
-            var centroidTexture = new THREE.DataTexture(centroidData, res, res, THREE.RGBAFormat, THREE.FloatType);
-            centroidTexture.needsUpdate = true;
-
-            var vertShader = document.getElementById('vertexShader').textContent;
-            var fragShader = document.getElementById('voronoiShader').textContent;
-
-
-            //create buffergeometry points to receive texture
-
-            gpuCompute = new GPUComputationRenderer( res, res, renderer );
-
-            jfVar = gpuCompute.addVariable( "jumpFlood", fragShader, voronoiTexture );
-            jfUniforms = jfVar.material.uniforms;
-            //jump flood all steps
-            jfUniforms['stepSize'] = {value: 1};
-            gpuCompute.setVariableDependencies( jfVar, [ jfVar ] );
-            gpuCompute.init();
-
-            gpuCompute.compute();
-            jfUniforms['stepSize'].value = 64;
-            gpuCompute.compute();
-
-            jfUniforms['stepSize'].value = 32;
-            gpuCompute.compute();
-
-            jfUniforms['stepSize'].value = 16;
-            gpuCompute.compute();
-
-            jfUniforms['stepSize'].value = 8;
-            gpuCompute.compute();
-
-            jfUniforms['stepSize'].value = 4;
-            gpuCompute.compute();
-
-            jfUniforms['stepSize'].value = 2;
-            gpuCompute.compute();
-
-            jfUniforms['stepSize'].value = 1;
-            gpuCompute.compute();
-
-
-            //var myTex = gpuCompute.getCurrentRenderTarget(jfVar).texture;
-            //console.log(myTex);
-            //var myArray = myTex.data;
-
-
-            //for(var i=0; i < myArray.length; i++){
-            //    console.log(myArray[i]);
-           // }
-
-
-            
-
-
-
-            var rtScene = new THREE.Scene();
-            rtScene.background = new THREE.Color('white');
-
-            var rtCamera = new THREE.Camera();
-            rtCamera.position.z = 1;
-
-            var renderTarget = gpuCompute.createRenderTarget(res, res, null, null, THREE.NearestFilter, 
-            THREE.NearestFilter);
-
-
-
-            var bufferGeometry = new THREE.BufferGeometry();
-            var positions = [];
-
-            for(var i=0; i < res; i++){
-                for(var j=0; j < res; j++){
-                    positions.push(i, j, 0);
-                }
-            }
-
-            //console.log(positions)
-
-            bufferGeometry.addAttribute( 'position', new THREE.Float32BufferAttribute( positions, 3 ) );
-            
-
-
-            var centroidFragShader = document.getElementById('vertexReductionFragShader').textContent;
-            var centroidVertexShader = document.getElementById('vertexReductionShader').textContent;
-
-            var referenceArray = [];
-            
-            for(var i=0; i < res; i++){
-                for(var j=0; j < res; j++){
-                    referenceArray.push(i / res, j / res);
-                }
-            }
-            //var references = new THREE.BufferAttribute( referenceArray , 2 ) );
-
-            bufferGeometry.addAttribute( 'reference', new THREE.Float32BufferAttribute( referenceArray, 2 )  );
-
-
-            var centroidUniforms = {
-                pixelPosition: { type: "t", value: gpuCompute.getCurrentRenderTarget(jfVar).texture },
-                
-            };
-
-            var centroidMaterial = new THREE.ShaderMaterial({
-                uniforms: centroidUniforms,
-                vertexShader: centroidVertexShader,
-                fragmentShader: centroidFragShader
-            });
-
-            var centroidMesh = new THREE.Points( new THREE.PlaneBufferGeometry( 2, 2, res, res ), centroidMaterial );
-
-            //const centroidRenderTarget = new THREE.WebGLRenderTarget(res, res);
-            //bufferGeometry.colorsNeedUpdate = true;
-
-
-            //var centroidPoints = new THREE.Points( bufferGeometry, centroidMaterial );
-            
-            rtScene.add(centroidMesh);
-            renderer.setRenderTarget(renderTarget);
-            renderer.render(rtScene, rtCamera);
-            renderer.setRenderTarget(null);
-
-
-
-            
-
-
-
-            var scene = new THREE.Scene();
-            var camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
-
-
-            //scene.add(centroidMesh);
-            //renderer.render(scene, rtCamera);
-
-
-
-            var cubeUniforms = {
-                //texture1: { type: "t", value: null }
-                texture1: { type: "t", value: null }
-            };
-
-            var cubeShader = document.getElementById('cubeShader').textContent;
-            var cubeMaterial = new THREE.ShaderMaterial({
-                uniforms: cubeUniforms,
-                vertexShader: vertShader,
-                fragmentShader: cubeShader
-            });
-
-            var cube = new THREE.Mesh( geometry, cubeMaterial );
-
-            scene.add( cube );
-
-            cubeUniforms["texture1"].value = renderTarget.texture;
-
-            camera.position.z = 5;
-
-            controls = new THREE.OrbitControls( camera, renderer.domElement );
-            controls.addEventListener( 'change', render );
-            //render( scene, camera );
-            render();
-            var myTexture = gpuCompute.getCurrentRenderTarget(jfVar).texture;
-            console.log(myTexture.toJSON());
-
-            function render(){
-                cubeUniforms["texture1"].value = gpuCompute.getCurrentRenderTarget(jfVar).texture;
-                //console.log(gpuCompute.getCurrentRenderTarget(jfVar).texture);
-                renderer.render( scene, camera );
-            }
-
-
-
-
-            function getSeeds(numSeeds, width, height){
-                var seeds = [];
-                for(var i=0; i < numSeeds; i++){
-                    seeds.push([getRandomInt(0, width-1), getRandomInt(0, height-1)]);
-                }
-                while(seedsInvalid(seeds)){
-                    for(var i=0; i < numSeeds; i++){
-                        seeds.push([getRandomInt(0, width-1), getRandomInt(0, height-1)]);
-                    }
-                }
-                return seeds;
-            }
-
-            //this will need to be fixed to not be extremely slow
-            function seedsInvalid(seeds){
-                var invalid = false;
-                for(var i=0; i < seeds.length; i++){
-                    for(var j=0; j < seeds.length; j++){
-                        if(j !== i){
-                            var seed0 = seeds[i];
-                            var seed1 = seeds[j];
-                            if(dist(seed0, seed1) < 5){
-                                invalid = true;
-                                break;
-                            }
-                        }
-                    }
-                }
-                return invalid;
-            }
-
-            function jumpFlood(){
-
-            }
-
-            function getRandomInt(min, max) {
-                min = Math.ceil(min);
-                max = Math.floor(max);
-                return Math.floor(Math.random() * (max - min + 1)) + min;
-            }
-
-            function dist(a, b){
-                var xDist = (a[0] - b[0])**2;
-                var yDist = (a[1] - b[1])**2;
-                return Math.sqrt(xDist + yDist);
-            }*/
 
 		</script>
 	</body>
