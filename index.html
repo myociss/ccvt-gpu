@@ -103,13 +103,33 @@
             helper = new THREE.FaceNormalsHelper( meshpoints, 2, 0x00ff00, 1 );
             scene.add(helper);*/
 
-            var geometry = new THREE.CylinderGeometry( 1, 1, 4, 32, 1, true );
+            //var geometry = new THREE.CylinderGeometry( 1, 1, 4, 32, 1, true );
+            var geometry = new THREE.BoxGeometry(1,1,1)
             var numSeeds = 14;
 
-            var res = 256;
+            var res = 128;
 
             var cubeShader = document.getElementById('cubeShader').textContent;
+            var vertShader = document.getElementById('vertexShader').textContent;
+
             var cubeUniforms = {
+                texture1: { type: "t", value: null }
+            };
+
+            var cubeMaterial = new THREE.ShaderMaterial({
+                uniforms: cubeUniforms,
+                vertexShader: vertShader,
+                fragmentShader: cubeShader
+            });
+
+            var cube = new THREE.Mesh( geometry, cubeMaterial );
+            scene.add( cube );
+            var iter = 0;
+
+            //cubeUniforms["texture1"].value = ccvt(res, numSeeds);
+
+            cubeUniforms['texture1'].value = ccvt(res, numSeeds);
+           /* var cubeUniforms = {
                 texture1: { type: "t", value: null }
             };
             var otherCubeUniforms = {
@@ -118,7 +138,7 @@
             var thirdCubeUniforms = {
                 texture1: { type: "t", value: null }
             };
-            //ccvt(res, numSeeds);
+            
             var vertShader = document.getElementById('vertexShader').textContent;
             //var fragShader = document.getElementById('voronoiShader').textContent;
 
@@ -146,24 +166,36 @@
             var otherCube = new THREE.Mesh(geometry, otherCubeMaterial);
             var thirdCube = new THREE.Mesh(geometry, thirdCubeMaterial);
 
-            //scene.add( cube );
+            scene.add( cube );
             //scene.add(otherCube);
-            scene.add(thirdCube);
+            //scene.add(thirdCube);
 
             //otherCube.translateX(3);
-            thirdCube.translateX(-3);
+            //thirdCube.translateX(-3);
 
             cubeUniforms["texture1"].value = ccvt(res, numSeeds);
-            otherCubeUniforms['texture1'].value = myVar;
-            thirdCubeUniforms['texture1'].value = asdf;
+            //otherCubeUniforms['texture1'].value = myVar;
+            //thirdCubeUniforms['texture1'].value = asdf;*/
 
-            camera.position.z = 7;
+            camera.position.z = 3;
 
             controls = new THREE.OrbitControls( camera, renderer.domElement );
             controls.addEventListener( 'change', render );
             render();
+            var renderCount = 0;
 
             function render(){
+                /*cubeUniforms["texture1"].value = something[iter];
+                //iter+=1;
+                renderCount += 1;
+                if(renderCount == 10){
+                    renderCount = 0;
+                    iter+=1;
+                    if(iter==something.length){
+                        iter=0;
+                    }
+                    //console.log(iter)
+                }*/
                 renderer.render( scene, camera );
             }
 

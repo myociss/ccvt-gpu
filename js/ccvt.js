@@ -1,57 +1,92 @@
-var myVar;
-var asdf;
-
 function ccvt(res, numSeeds){
     var gpuComputeVoronoi = new GPUComputationRenderer( res, res, renderer );
     var voronoiTexture = initVoronoiTexture(numSeeds, res);
-    var jfVar = gpuComputeVoronoi.addVariable( 'jumpFlood', jumpFloodShader, voronoiTexture );
+
+
+    var jfVar = gpuComputeVoronoi.addVariable( 'jf', jumpFloodShader, voronoiTexture );
     var jfUniforms = jfVar.material.uniforms;
 
     jfUniforms['stepSize'] = {value: 0};
     gpuComputeVoronoi.setVariableDependencies( jfVar, [ jfVar ] );
     gpuComputeVoronoi.init();
-    //return jfaPlusOne(jfVar, gpuComputeVoronoi, res);
-    //jfaPlusOne
 
+    //initialize new seed cascade
     var newSeedMesh = initNewSeedCalcMesh(numSeeds, res);
     var newSeedRt = gpuComputeVoronoi.createRenderTarget(res, res, null, null, THREE.NearestFilter, 
         THREE.NearestFilter);
-
+    
     var centroidTextureMesh = initCentroidTextureMesh(numSeeds, res);
     var centroidRenderTarget = gpuComputeVoronoi.createRenderTarget(res, res, null, null, THREE.NearestFilter, 
         THREE.NearestFilter);
 
-    /*for(var i=0; i < 5; i++){
+    var initJfa = jfaPlusOne(jfVar, gpuComputeVoronoi, res);
+
+
+    for(var i=0; i < 4; i++){
+        var centroidTextureMesh = initCentroidTextureMesh(numSeeds, res);
+        var centroidRenderTarget = gpuComputeVoronoi.createRenderTarget(res, res, null, null, THREE.NearestFilter, 
+            THREE.NearestFilter);
+
+
+        //compute new seed locations
+        newSeedMesh.material.uniforms['pixelPosition'].value = gpuComputeVoronoi.getCurrentRenderTarget(jfVar).texture;
         getNewCentroidTexture(newSeedMesh, newSeedRt, res);
-        centroidTextureMesh.material.uniforms['centroidPlacement'].value = newSeedRt.texture;
-        renderCentroidsToTexture(centroidTextureMesh, centroidRenderTarget, numSeeds, res); 
-        jfUniforms['jumpFlood'] = centroidRenderTarget.texture;
-        jfaPlusOne(jfVar, gpuComputeVoronoi, res);
-    }
-
-    return gpuComputeVoronoi.getCurrentRenderTarget(jfVar).texture;*/
-    var jfa;
-
-    for(var i=0; i < 25; i++){
-        jfa = jfaPlusOne(jfVar, gpuComputeVoronoi, res);
-        asdf = jfa;
-
-        newSeedMesh.material.uniforms['pixelPosition'].value = jfa;
-        getNewCentroidTexture(newSeedMesh, newSeedRt, res);
-
         centroidTextureMesh.material.uniforms['centroidPlacement'].value = newSeedRt.texture;
         renderCentroidsToTexture(centroidTextureMesh, centroidRenderTarget, numSeeds, res);
-        jfUniforms['jumpFlood'].value = centroidRenderTarget.texture;
+        var centroidTarget = centroidRenderTarget.texture;
+
+        //compute new voronoi diagram
+        gpuComputeVoronoi = new GPUComputationRenderer( res, res, renderer );
+        jfVar = gpuComputeVoronoi.addVariable( 'jf', jumpFloodShader, centroidRenderTarget.texture );
+        jfUniforms = jfVar.material.uniforms;
+        jfUniforms['stepSize'] = {value: 0};
+        gpuComputeVoronoi.setVariableDependencies( jfVar, [ jfVar ] );
+        gpuComputeVoronoi.init();
+
+        initJfa = jfaPlusOne(jfVar, gpuComputeVoronoi, res);
     }
-
-    //return jfa;
-
-    return centroidRenderTarget.texture;
-
-    //return gpuComputeVoronoi.getCurrentRenderTarget(jfVar).texture;
-
-    //return jfaPlusOne(jfVar, gpuComputeVoronoi, res);
+    return initJfa;
 }
+
+/*function myInitGpu(myVar){
+    myVar.renderTargets[ 0 ] = this.createRenderTarget( sizeX, sizeY, variable.wrapS, variable.wrapT, variable.minFilter, variable.magFilter );
+	variable.renderTargets[ 1 ] = this.createRenderTarget( sizeX, sizeY, variable.wrapS, variable.wrapT, variable.minFilter, variable.magFilter );
+    this.renderTexture( variable.initialValueTexture, variable.renderTargets[ 0 ] );
+    this.renderTexture( variable.initialValueTexture, variable.renderTargets[ 1 ] );
+
+			// Adds dependencies uniforms to the ShaderMaterial
+			var material = variable.material;
+			var uniforms = material.uniforms;
+			if ( variable.dependencies !== null ) {
+
+				for ( var d = 0; d < variable.dependencies.length; d++ ) {
+
+					var depVar = variable.dependencies[ d ];
+
+					if ( depVar.name !== variable.name ) {
+
+						// Checks if variable exists
+						var found = false;
+						for ( var j = 0; j < this.variables.length; j++ ) {
+
+							if ( depVar.name === this.variables[ j ].name ) {
+								found = true;
+								break;
+							}
+
+						}
+						if ( ! found ) {
+							return "Variable dependency not found. Variable=" + variable.name + ", dependency=" + depVar.name;
+						}
+
+					}
+
+					uniforms[ depVar.name ] = { value: null };
+
+					material.fragmentShader = "\nuniform sampler2D " + depVar.name + ";\n" + material.fragmentShader;
+
+				}
+}*/
 
 function writeCentroidPlacementShader(numSeeds){
     var centroidPlacementShader = centroidPlacementShaderMain;
@@ -61,12 +96,24 @@ function writeCentroidPlacementShader(numSeeds){
         seed = vec2(${i}, 0) / resolution.xy;
         centroidColorStored = texture2D(centroidPlacement, seed );
         centroidColor = vec4(centroidColorStored / centroidColorStored[2]);
+
+        if(centroidColor.x < 0.0){
+            centroidColor.x = 1.0 + centroidColor.x;
+        }
+
+        if(centroidColor.x >= 1.0){
+            centroidColor.x = 1.0 - centroidColor.x;
+        }
+
         centroidPos = vec2(centroidColor[0], centroidColor[1]);
 
         if(between(uv, vec2(centroidPos - errorBound), vec2(centroidPos + errorBound))){
-            //gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
             gl_FragColor = vec4(centroidPos, ${i}.0/res, 1.0);
+            //gl_FragColor=vec4(1.0,0.0,0.0,1.0);
         }
+        //if(all(equal(uv, centroidPos))){
+        //    gl_FragColor = vec4(centroidPos, ${i}.0/res, 1.0);
+        //}
         `;
     }
     centroidPlacementShader += `}`;
@@ -121,7 +168,7 @@ function initCentroidTextureMesh(numSeeds, res){
     var centroidTextureUniforms = {
         centroidPlacement: { type: "t", value: null },
         numSeeds: {value: numSeeds},
-        errorBound: {value: [0.9 / res, 0.9 / res]},
+        errorBound: {value: [0.95 / res, 0.95 / res]},
         res: {value: res}
     };
 
@@ -189,47 +236,11 @@ function renderCentroidsToTexture(centroidMesh, centroidRenderTarget, numSeeds, 
     renderer.setRenderTarget( currentRenderTarget );
 }
 
-/*function myCreateTexture(sizeX, sizeY) {
-
-    var a = new Float32Array( sizeX * sizeY * 4 );
-    var texture = new THREE.DataTexture( a, sizeX, sizeY, THREE.RGBAFormat, THREE.FloatType );
-    texture.needsUpdate = true;
-
-    //texture[0] = [100, 50, 1.0, 1.0];
-    //texture[1] = [90/128, 50/128, 1.0, 1.0];
-    //texture.image.data[0] = 25 / 128;
-    //texture.image.data[1] = 40 / 128;
-    for(var i=0; i < 14; i++){
-        var idx = i * 4;
-        texture.image.data[idx] = getRandomInt(0, 127) / 128;
-        texture.image.data[idx + 1] = getRandomInt(0, 127) / 128;
-    }
-
-    return texture;
-
-};*/
-
-/*function initCentroidTextureRenderer(res, centroidTextureMesh){
-    var rtScene = new THREE.Scene();
-
-	var rtCamera = new THREE.Camera();
-    rtCamera.position.z = 1;
-    
-    var renderTarget = gpuCompute.createRenderTarget(res, res, null, null, THREE.NearestFilter, 
-        THREE.NearestFilter);
-    //textureRenderer.setRenderTarget(renderTarget);
-    
-}*/
-
 function jfaPlusOne(jfVar, gpuCompute, res){
     var jfUniforms = jfVar.material.uniforms;
-
-    jfUniforms['stepSize'].value = 1;
-    gpuCompute.compute();
-
     var stepSize = 2 ** (Math.ceil(Math.log2(res)) - 1);
+
     while(stepSize >= 1.0){
-        //console.log(stepSize)
         jfUniforms['stepSize'].value = stepSize;
         gpuCompute.compute();
         stepSize /= 2;
@@ -290,10 +301,10 @@ function initVoronoiTexture(numSeeds, res){
     for(var i=0; i < res; i++){
         for(var j=0; j < res; j++){
             var dataIdx = 4 * ((i * res) + j);
-            data[dataIdx] = seedData[i][j][0];
-            data[dataIdx + 1] = seedData[i][j][1];
-            data[dataIdx + 2] = seedData[i][j][2];
-            data[dataIdx + 3] = seedData[i][j][3];
+            data[dataIdx] = seedData[j][i][0];
+            data[dataIdx + 1] = seedData[j][i][1];
+            data[dataIdx + 2] = seedData[j][i][2];
+            data[dataIdx + 3] = seedData[j][i][3];
         }
     }
 

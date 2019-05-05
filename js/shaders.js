@@ -32,7 +32,7 @@ var jumpFloodShader =
         }
 
         //what color does it have?
-        vec4 otherColor = texture2D(jumpFlood, otherUv);
+        vec4 otherColor = texture2D(jf, otherUv);
 
         //what label does that translate to?
         vec2 otherLabel = vec2(otherColor[0], otherColor[1]);
@@ -73,16 +73,13 @@ var jumpFloodShader =
         vec2 uv = gl_FragCoord.xy / resolution.xy;
 
         //what color do i have?
-        vec4 myColor = texture2D(jumpFlood, uv);
+        vec4 myColor = texture2D(jf, uv);
 
         //what label does that translate to?
         vec2 myLabel = vec2(myColor[0], myColor[1]);
 
         //what is my seed id if any?
         float mySeedId = myColor[2];
-
-        //how far from my label am i?
-        float myDist = cylinderDistance(uv, myLabel);
 
         int myStepSize = stepSize;
 
@@ -130,15 +127,42 @@ var reduceVerticesShader =
     varying lowp vec4 vColor;
     varying vec2 vUv;
 
+    float cylinderDistance(vec2 a, vec2 b){
+        float xDist = min(abs(a.x - b.x), 1.0 - abs(a.x - b.x));
+        float yDist = a.y - b.y;
+        return sqrt(xDist * xDist + yDist * yDist);
+    }
+
+    float euclideanDistance(vec2 a, vec2 b){
+        float xDist = a.x - b.x;
+        float yDist = a.y - b.y;
+        return sqrt(xDist * xDist + yDist * yDist);
+    }
+
     void main() {
         vUv = reference;
         gl_PointSize = 1.0;
 
         vec4 textureColor = texture2D( pixelPosition, reference );
+        float seedX = textureColor[0];
+        float seedY = textureColor[1];
         float seedId = textureColor[2];
 
+        //is my cylinder distance to my voronoi site closer than my euclidean distance?
+        float myCylinderDist = cylinderDistance(textureColor.xy, reference);
+        float myEuclidDist = euclideanDistance(textureColor.xy, reference);
+
+        if(myCylinderDist < myEuclidDist){
+            if(textureColor.x < reference.x){
+                vColor = vec4(-(1.0 - reference.x), textureColor[1], 1.0, 1.0);
+            } else {
+                vColor = vec4(1.0 + reference.x, textureColor[1], 1.0, 1.0);
+            }
+        } else {
+            vColor = vec4(reference, 1.0, 1.0);
+        }
+
         //vColor = vec4(textureColor[0], textureColor[1], 1.0, 1.0);
-        vColor = vec4(reference, 1.0, 1.0);
         gl_Position = vec4((seedId * 2.0) + -1.0 + (1.0/res),
             -1.0 + (1.0/res), 0, 1.0);        
     }`;
