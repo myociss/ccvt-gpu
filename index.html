@@ -9,7 +9,6 @@
 		</style>
 	</head>
 	<body>
-        <script src="js/plugins/gpu.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/3.3.0/math.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/103/three.js"></script>
         <script src="js/plugins/OrbitControls.js"></script>
@@ -29,173 +28,64 @@
                                 vec4(position,1.0);
             }
         </script>
-        <script id="cubeShader" type="x-shader/x-fragment">
+        <script id="cylinderShader" type="x-shader/x-fragment">
             uniform sampler2D texture1;
 
             varying vec2 vUv;
 
             void main() {
-                gl_FragColor = texture2D(texture1, vUv);
+                vec4 color = texture2D(texture1, vUv);
+                gl_FragColor = vec4(color[2], color[0], color[1], 1.0);
             }
         </script>
 
 		<script>
 
             var scene = new THREE.Scene();
-            //scene.background = new THREE.Color( 0xff0000 );
+            //scene.background = new THREE.Color( 0xffffff );
             var camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
 
             var renderer = new THREE.WebGLRenderer();
             renderer.setSize( window.innerWidth, window.innerHeight );
             document.body.appendChild( renderer.domElement );
 
-            /*var geom = new THREE.Geometry();
-            for(var i=0; i < vertices.length; i++){
-                var vertex = new THREE.Vector3(30 * vertices[i][0], 30 * vertices[i][1], 30 * vertices[i][2]);
-                geom.vertices.push(vertex);
-                var vertex_color = vertex_colors[i];
-                //console.log(vertex_color)
-                //geom.colors.push(new THREE.Color(vertex_color, vertex_color, vertex_color));
-                //geom.colors.push(new THREE.Color(0.0, 1.0, 1.0));
-            }
-            geom.colorsNeedUpdate = true;
 
-            for(var i=0; i < faces.length; i++){
-                var v0 = faces[i][0];
-                var v1 = faces[i][1];
-                var v2 = faces[i][2];
-                var face = new THREE.Face3(v0,v1,v2);
-                var v0Color = vertex_colors[v0];
-                var v1Color = vertex_colors[v1];
-                var v2Color = vertex_colors[v2];
+            var geometry = new THREE.CylinderGeometry( 1, 1, 4, 32, 1, true );
+            //var geometry = new THREE.BoxGeometry(1,1,1)
+            var numSeeds = 30;
 
-                
-                face.vertexColors[0] = new THREE.Color(v0Color,v0Color,v0Color); // red
-                face.vertexColors[1] = new THREE.Color(v1Color,v1Color,v1Color); // green
-                face.vertexColors[2] = new THREE.Color(v2Color,v2Color,v2Color); // blue
+            var res = 512;
 
-                if(v0==398){
-                    face.vertexColors[0] = new THREE.Color(1.0,0,0);
-                }
-
-                if(v1==398){
-                    face.vertexColors[1] = new THREE.Color(1.0,0,0);
-                }
-
-                if(v2==398){
-                    face.vertexColors[2] = new THREE.Color(1.0,0,0);
-                }
-                geom.faces.push(face);
-            }
-            geom.computeFaceNormals();
-            var pointsMaterial = new THREE.MeshBasicMaterial({ vertexColors: THREE.VertexColors });
-
-            var meshpoints = new THREE.Mesh( geom, pointsMaterial );
-
-            var light = new THREE.DirectionalLight( 0xefefff, 1.5 );
-            light.position.set( 1, 1, 1 ).normalize();
-            scene.add( light );
-            var light = new THREE.DirectionalLight( 0xffefef, 1.5 );
-            light.position.set( -1, -1, -1 ).normalize();
-            scene.add( light );
-
-            scene.add( meshpoints );
-            helper = new THREE.FaceNormalsHelper( meshpoints, 2, 0x00ff00, 1 );
-            scene.add(helper);*/
-
-            //var geometry = new THREE.CylinderGeometry( 1, 1, 4, 32, 1, true );
-            var geometry = new THREE.BoxGeometry(1,1,1)
-            var numSeeds = 14;
-
-            var res = 128;
-
-            var cubeShader = document.getElementById('cubeShader').textContent;
+            var cylinderShader = document.getElementById('cylinderShader').textContent;
             var vertShader = document.getElementById('vertexShader').textContent;
 
-            var cubeUniforms = {
+            var cylinderUniforms = {
                 texture1: { type: "t", value: null }
             };
 
-            var cubeMaterial = new THREE.ShaderMaterial({
-                uniforms: cubeUniforms,
+            var material = new THREE.ShaderMaterial({
+                uniforms: cylinderUniforms,
                 vertexShader: vertShader,
-                fragmentShader: cubeShader
+                fragmentShader: cylinderShader
             });
 
-            var cube = new THREE.Mesh( geometry, cubeMaterial );
-            scene.add( cube );
-            var iter = 0;
+            material.side = THREE.DoubleSide;
+            //material.transparent = true;
 
-            //cubeUniforms["texture1"].value = ccvt(res, numSeeds);
+            var cylinder = new THREE.Mesh( geometry, material );
+            scene.add( cylinder );
 
-            cubeUniforms['texture1'].value = ccvt(res, numSeeds);
-           /* var cubeUniforms = {
-                texture1: { type: "t", value: null }
-            };
-            var otherCubeUniforms = {
-                texture1: { type: "t", value: null }
-            };
-            var thirdCubeUniforms = {
-                texture1: { type: "t", value: null }
-            };
-            
-            var vertShader = document.getElementById('vertexShader').textContent;
-            //var fragShader = document.getElementById('voronoiShader').textContent;
 
-            var cubeMaterial = new THREE.ShaderMaterial({
-                uniforms: cubeUniforms,
-                vertexShader: vertShader,
-                fragmentShader: cubeShader
-            });
+            cylinderUniforms['texture1'].value = ccvt(res, numSeeds);
 
-            var otherCubeMaterial = new THREE.ShaderMaterial({
-                uniforms: otherCubeUniforms,
-                vertexShader: vertShader,
-                fragmentShader: cubeShader
-            });
-
-            var thirdCubeMaterial = new THREE.ShaderMaterial({
-                uniforms: thirdCubeUniforms,
-                vertexShader: vertShader,
-                fragmentShader: cubeShader
-            });
-
-            thirdCubeMaterial.side = THREE.DoubleSide;
-
-            var cube = new THREE.Mesh( geometry, cubeMaterial );
-            var otherCube = new THREE.Mesh(geometry, otherCubeMaterial);
-            var thirdCube = new THREE.Mesh(geometry, thirdCubeMaterial);
-
-            scene.add( cube );
-            //scene.add(otherCube);
-            //scene.add(thirdCube);
-
-            //otherCube.translateX(3);
-            //thirdCube.translateX(-3);
-
-            cubeUniforms["texture1"].value = ccvt(res, numSeeds);
-            //otherCubeUniforms['texture1'].value = myVar;
-            //thirdCubeUniforms['texture1'].value = asdf;*/
 
             camera.position.z = 3;
 
             controls = new THREE.OrbitControls( camera, renderer.domElement );
             controls.addEventListener( 'change', render );
             render();
-            var renderCount = 0;
 
             function render(){
-                /*cubeUniforms["texture1"].value = something[iter];
-                //iter+=1;
-                renderCount += 1;
-                if(renderCount == 10){
-                    renderCount = 0;
-                    iter+=1;
-                    if(iter==something.length){
-                        iter=0;
-                    }
-                    //console.log(iter)
-                }*/
                 renderer.render( scene, camera );
             }
 

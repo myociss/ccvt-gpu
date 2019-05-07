@@ -22,7 +22,7 @@ function ccvt(res, numSeeds){
     var initJfa = jfaPlusOne(jfVar, gpuComputeVoronoi, res);
 
 
-    for(var i=0; i < 4; i++){
+    for(var i=0; i < 10; i++){
         var centroidTextureMesh = initCentroidTextureMesh(numSeeds, res);
         var centroidRenderTarget = gpuComputeVoronoi.createRenderTarget(res, res, null, null, THREE.NearestFilter, 
             THREE.NearestFilter);
